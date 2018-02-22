@@ -1,8 +1,24 @@
 cmake_minimum_required (VERSION 2.6)
 project (kaldi-gop)
 
-# Kaldi's path
-set(KALDI_ROOT /home/junbo/src/paddy-engine/depends/kaldi-5.1)  # please edit this line
+# BLAS
+find_package(BLAS REQUIRED)
+if(NOT BLAS_FOUND)
+  message(FATAL_ERROR "Can't find BLAS. On Ubunbu, you may want to "
+                "install it by:\n  sudo apt-get install libatlas-dev")
+endif()
+
+# Build Kaldi
+SET(KALDI_ROOT "${CMAKE_SOURCE_DIR}/kaldi-5.1")
+SET(BUILD_JOBS 8)
+if(NOT EXISTS ${KALDI_ROOT})
+  execute_process(COMMAND git clone -b 5.1 https://github.com/kaldi-asr/kaldi.git ${KALDI_ROOT})
+  execute_process(COMMAND extras/check_dependencies.sh WORKING_DIRECTORY ${KALDI_ROOT}/tools)
+  execute_process(COMMAND make -j ${BUILD_JOBS} WORKING_DIRECTORY ${KALDI_ROOT}/tools)
+  execute_process(COMMAND ./configure WORKING_DIRECTORY ${KALDI_ROOT}/src)
+  execute_process(COMMAND make depend -j ${BUILD_JOBS} WORKING_DIRECTORY ${KALDI_ROOT}/src)
+  execute_process(COMMAND make -j ${BUILD_JOBS} WORKING_DIRECTORY ${KALDI_ROOT}/src)
+endif()
 
 # Settings
 add_compile_options(-std=c++11)
