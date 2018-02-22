@@ -1,0 +1,16 @@
+--- "Makefile"	2018-02-15 02:58:49.000000000 +0800
++++ Makefile	2018-09-21 13:51:28.577621316 +0800
+@@ -6,10 +6,9 @@
+ 
+ 
+ SUBDIRS = base matrix util feat tree gmm transform \
+-          fstext hmm lm decoder lat kws cudamatrix nnet \
+-          bin fstbin gmmbin fgmmbin featbin \
+-          nnetbin latbin sgmm2 sgmm2bin nnet2 nnet3 rnnlm chain nnet3bin nnet2bin kwsbin \
+-          ivector ivectorbin online2 online2bin lmbin chainbin rnnlmbin
++          fstext hmm lm decoder lat cudamatrix \
++          nnet3 chain \
++          ivector online2
+ 
+ MEMTESTDIRS = base matrix util feat tree gmm transform \
+           fstext hmm lm decoder lat nnet kws chain \

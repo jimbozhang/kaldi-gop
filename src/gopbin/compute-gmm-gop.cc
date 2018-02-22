@@ -21,12 +21,14 @@
 int main(int argc, char *argv[]) {
   try {
     using namespace kaldi;
-    
+
     const char *usage =
         "Compute GOP with GMM-based models.\n"
-        "Usage:   compute-gmm-gop [options] tree-in model-in lexicon-fst-in feature-rspecifier transcriptions-rspecifier gop-wspecifier\n"
+        "Usage:   compute-gmm-gop [options] tree-in model-in lexicon-fst-in "
+        "feature-rspecifier transcriptions-rspecifier gop-wspecifier\n"
         "e.g.: \n"
-        " compute-gmm-gop tree 1.mdl lex.fst scp:train.scp ark:train.tra ark,t:1.gop\n";
+        " compute-gmm-gop tree 1.mdl lex.fst scp:train.scp ark:train.tra "
+        "ark,t:1.gop\n";
 
     ParseOptions po(usage);
 
@@ -53,8 +55,8 @@ int main(int argc, char *argv[]) {
     // Compute for each utterance
     for (; !feature_reader.Done(); feature_reader.Next()) {
       std::string utt = feature_reader.Key();
-      if (! transcript_reader.HasKey(utt)) {
-        KALDI_WARN << "Can not find alignment for utterance " << utt;        
+      if (!transcript_reader.HasKey(utt)) {
+        KALDI_WARN << "Can not find alignment for utterance " << utt;
         continue;
       }
       const Matrix<BaseFloat> &features = feature_reader.Value();
@@ -65,7 +67,7 @@ int main(int argc, char *argv[]) {
     }
     KALDI_LOG << "Done.";
     return 0;
-  } catch(const std::exception &e) {
+  } catch (const std::exception &e) {
     std::cerr << e.what();
     return -1;
   }

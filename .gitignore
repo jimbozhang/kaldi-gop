@@ -1,4 +1,13 @@
+#common
+.vscode
 build
+*.zip
+
+# kaldi
+depends/kaldi-5.*
+depends/kaldi
+
+# egs
 egs/gop-compute/steps
 egs/gop-compute/utils
 egs/gop-compute/data

@@ -19,14 +19,14 @@
 #include <string>
 #include <vector>
 #include "base/kaldi-common.h"
-#include "util/common-utils.h"
-#include "gmm/am-diag-gmm.h"
-#include "hmm/transition-model.h"
-#include "fstext/fstext-utils.h"
 #include "decoder/decoder-wrappers.h"
+#include "fstext/fstext-utils.h"
+#include "gmm/am-diag-gmm.h"
 #include "gmm/decodable-am-diag-gmm.h"
-#include "lat/kaldi-lattice.h"
 #include "hmm/hmm-utils.h"
+#include "hmm/transition-model.h"
+#include "lat/kaldi-lattice.h"
+#include "util/common-utils.h"
 #include "gop/gmm-gop.h"
 
 namespace kaldi {
@@ -35,9 +35,8 @@ typedef typename fst::StdArc Arc;
 typedef typename Arc::StateId StateId;
 typedef typename Arc::Weight Weight;
 
-void GmmGop::Init(std::string &tree_in_filename,
-            std::string &model_in_filename,
-            std::string &lex_in_filename) {
+void GmmGop::Init(std::string &tree_in_filename, std::string &model_in_filename,
+                  std::string &lex_in_filename) {
   bool binary;
   Input ki(model_in_filename, &binary);
   tm_.Read(ki.Stream(), binary);
@@ -45,11 +44,14 @@ void GmmGop::Init(std::string &tree_in_filename,
   ReadKaldiObject(tree_in_filename, &ctx_dep_);
 
   fst::VectorFst<fst::StdArc> *lex_fst = fst::ReadFstKaldi(lex_in_filename);
-  std::vector<int32> disambig_syms;  
+  std::vector<int32> disambig_syms;
   TrainingGraphCompilerOptions gopts;
   gc_ = new TrainingGraphCompiler(tm_, ctx_dep_, lex_fst, disambig_syms, gopts);
 
   for (size_t i = 0; i < tm_.NumTransitionIds(); i++) {
+    // The transition-ids are only for building the denominator graph. Although
+    // one pdf-id may have multiple transition-ids, all those transitions-ids
+    //  share the same HMM state (of course).
     pdfid_to_tid[tm_.TransitionIdToPdf(i)] = i;
   }
 }
@@ -61,7 +63,7 @@ BaseFloat GmmGop::Decode(fst::VectorFst<fst::StdArc> &fst,
   decode_opts.beam = 500;
   FasterDecoder decoder(fst, decode_opts);
   decoder.Decode(&decodable);
-  if (! decoder.ReachedFinal()) {
+  if (!decoder.ReachedFinal()) {
     KALDI_WARN << "Did not successfully decode.";
   }
   fst::VectorFst<LatticeArc> decoded;
@@ -69,15 +71,14 @@ BaseFloat GmmGop::Decode(fst::VectorFst<fst::StdArc> &fst,
   std::vector<int32> osymbols;
   LatticeWeight weight;
   GetLinearSymbolSequence(decoded, align, &osymbols, &weight);
-  BaseFloat likelihood = -(weight.Value1()+weight.Value2());
+  BaseFloat likelihood = -(weight.Value1() + weight.Value2());
 
   return likelihood;
 }
 
 BaseFloat GmmGop::ComputeGopNumera(DecodableAmDiagGmmScaled &decodable,
                                    std::vector<int32> &align,
-                                   MatrixIndexT start_frame,
-                                   int32 size) {
+                                   MatrixIndexT start_frame, int32 size) {
   KALDI_ASSERT(start_frame + size <= align.size());
   BaseFloat likelihood = 0;
   for (MatrixIndexT frame = start_frame; frame < start_frame + size; frame++) {
@@ -88,7 +89,8 @@ BaseFloat GmmGop::ComputeGopNumera(DecodableAmDiagGmmScaled &decodable,
 }
 
 BaseFloat GmmGop::ComputeGopNumeraViterbi(DecodableAmDiagGmmScaled &decodable,
-                                          int32 phone_l, int32 phone, int32 phone_r) {
+                                          int32 phone_l, int32 phone,
+                                          int32 phone_r) {
   KALDI_ASSERT(ctx_dep_.ContextWidth() == 3);
   KALDI_ASSERT(ctx_dep_.CentralPosition() == 1);
   std::vector<int32> phoneseq(3);
@@ -101,7 +103,8 @@ BaseFloat GmmGop::ComputeGopNumeraViterbi(DecodableAmDiagGmmScaled &decodable,
   fst.SetStart(cur_state);
   for (size_t c = 0; c < tm_.GetTopo().NumPdfClasses(phone); c++) {
     int32 pdf_id;
-    KALDI_ASSERT(ctx_dep_.Compute(phoneseq, c, &pdf_id));
+    if (!ctx_dep_.Compute(phoneseq, c, &pdf_id))
+      KALDI_ERR << "Failed to obtain pdf_id.";
     int32 tid = pdfid_to_tid[pdf_id];
 
     StateId next_state = fst.AddState();
@@ -137,7 +140,8 @@ BaseFloat GmmGop::ComputeGopDenomin(DecodableAmDiagGmmScaled &decodable,
     StateId cur_state = start_state;
     for (size_t c = 0; c < pdfclass_num; c++) {
       int32 pdf_id;
-      KALDI_ASSERT(ctx_dep_.Compute(phoneseq, c, &pdf_id));
+      if (!ctx_dep_.Compute(phoneseq, c, &pdf_id))
+        KALDI_ERR << "Failed to obtain pdf_id.";
       int32 tid = pdfid_to_tid[pdf_id];
 
       StateId next_state = fst.AddState();
@@ -157,11 +161,14 @@ BaseFloat GmmGop::ComputeGopDenomin(DecodableAmDiagGmmScaled &decodable,
 }
 
 void GmmGop::GetContextFromSplit(std::vector<std::vector<int32> > split,
-                                 int32 index, int32 &phone_l, int32 &phone, int32 &phone_r) {
+                                 int32 index, int32 &phone_l, int32 &phone,
+                                 int32 &phone_r) {
   KALDI_ASSERT(index < split.size());
-  phone_l = (index > 0) ? tm_.TransitionIdToPhone(split[index-1][0]) : 1;
+  phone_l = (index > 0) ? tm_.TransitionIdToPhone(split[index - 1][0]) : 1;
   phone = tm_.TransitionIdToPhone(split[index][0]);
-  phone_r = (index < split.size() - 1) ? tm_.TransitionIdToPhone(split[index+1][0]): 1;
+  phone_r = (index < split.size() - 1)
+                ? tm_.TransitionIdToPhone(split[index + 1][0])
+                : 1;
 }
 
 void GmmGop::Compute(const Matrix<BaseFloat> &feats,
@@ -181,8 +188,8 @@ void GmmGop::Compute(const Matrix<BaseFloat> &feats,
   phones_.resize(split.size());
   int32 frame_start_idx = 0;
   for (MatrixIndexT i = 0; i < split.size(); i++) {
-    SubMatrix<BaseFloat> feats_in_phone = feats.Range(frame_start_idx, split[i].size(),
-                                                      0, feats.NumCols());
+    SubMatrix<BaseFloat> feats_in_phone =
+        feats.Range(frame_start_idx, split[i].size(), 0, feats.NumCols());
     const Matrix<BaseFloat> features(feats_in_phone);
     DecodableAmDiagGmmScaled split_decodable(am_, tm_, features, 1.0);
 
@@ -190,11 +197,13 @@ void GmmGop::Compute(const Matrix<BaseFloat> &feats,
     GetContextFromSplit(split, i, phone_l, phone, phone_r);
 
     bool use_viterbi_numera = true;
-    BaseFloat gop_numerator = use_viterbi_numera ?
-                                ComputeGopNumeraViterbi(split_decodable, phone_l, phone, phone_r):
-                                ComputeGopNumera(ali_decodable, align,
-                                                 frame_start_idx, split[i].size());
-    BaseFloat gop_denominator = ComputeGopDenomin(split_decodable, phone_l, phone_r);
+    BaseFloat gop_numerator =
+        use_viterbi_numera
+            ? ComputeGopNumeraViterbi(split_decodable, phone_l, phone, phone_r)
+            : ComputeGopNumera(ali_decodable, align, frame_start_idx,
+                               split[i].size());
+    BaseFloat gop_denominator =
+        ComputeGopDenomin(split_decodable, phone_l, phone_r);
     gop_result_(i) = (gop_numerator - gop_denominator) / split[i].size();
     phones_[i] = phone;
 
@@ -202,12 +211,8 @@ void GmmGop::Compute(const Matrix<BaseFloat> &feats,
   }
 }
 
-Vector<BaseFloat>& GmmGop::Result() {
-  return gop_result_;
-}
+Vector<BaseFloat> &GmmGop::Result() { return gop_result_; }
 
-std::vector<int32>& GmmGop::Phonemes() {
-  return phones_;
-}
+std::vector<int32> &GmmGop::Phonemes() { return phones_; }
 
 }  // End namespace kaldi
