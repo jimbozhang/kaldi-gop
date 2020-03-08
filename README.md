@@ -1,6 +1,13 @@
 # kaldi-gop
 This project computes GMM-based GOP (Goodness of Pronunciation) using Kaldi.
 
+## Notes about the DNN-based implementation
+
+This implementation is GMM-based. For DNN-based implementation, please check Kaldi's official repository:
+> https://github.com/kaldi-asr/kaldi/tree/master/egs/gop
+
+The performance of GOP-DNN should be much better than GOP-GMM.
+
 ## How to build
 ```
 ./build.sh
@@ -31,10 +38,3 @@ $$
 where $Q$ is the whole phone set.
 
 The numerator of the equation is calculated from forced alignment result and the denominator is calculated from a Viterbi decoding with an unconstrained phone loop.
-
-## DNN-based implementation
-
-This implementation is GMM-based. For DNN-based implementation, please check Kaldi's official repository:
-> https://github.com/kaldi-asr/kaldi/tree/master/egs/gop
-
-The performance of GOP-DNN should be much better than GOP-GMM.
