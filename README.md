@@ -4,7 +4,7 @@ This project computes GMM-based GOP (Goodness of Pronunciation) using Kaldi.
 ## Notes about the DNN-based implementation
 
 This implementation is GMM-based. For DNN-based implementation, please check Kaldi's official repository:
-> https://github.com/kaldi-asr/kaldi/tree/master/egs/gop
+> https://github.com/kaldi-asr/kaldi/tree/master/egs/gop_speechocean762
 
 The performance of GOP-DNN should be much better than GOP-GMM.
 
